@@ -45,12 +45,7 @@ protected:
         matrix_mn Ad = A.template cast<double>();
         matrix_mm Ud = Ui.template cast<double>();
         matrix_nn Vd = Vi.template cast<double>();
-
-        // Вывод размеров для отладки (можно отключить)
-        SHOW_DIMS(Ad);
-        SHOW_DIMS(Ud);
-        SHOW_DIMS(Vd);
-
+        
         // Единичные матрицы
         MatrixXd Im = MatrixXd::Identity(m, m);
         MatrixXd In = MatrixXd::Identity(n, n);
@@ -61,8 +56,6 @@ protected:
         // Шаг 1: Вычисление промежуточных матриц P и Q
         matrix_mn P = Ad * Vd;  // P = A * V
         matrix_nn Q = Ad.transpose() * Ud_1;  // Q = A^T * U_1
-        SHOW_DIMS(P);
-        SHOW_DIMS(Q);
 
         // Транспонированные версии V и U
         matrix_nn ViT = Vd.transpose();
