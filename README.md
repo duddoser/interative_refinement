@@ -18,4 +18,5 @@
 - Свириденко К., КМБО-01-23 - имплементация алгоритма 8 на C++.
 
 [1] Uchino Y., Terao T., Ozaki K. Acceleration of iterative refinement for singular value decomposition / Numerical Algorithms. — 2024. — № 95. — С. 979–1009.
+
 [2] Ogita, T., Aishima, K.: Iterative refinement for singular value decomposition based on matrix multiplication / J. Comput. Appl. —2020. — №369. – 112512.
