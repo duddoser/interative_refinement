@@ -147,4 +147,17 @@ public:
     Matrix<T, M, M> matrixU() { return U; }
     Matrix<T, N, N> matrixV() { return V; }
     Matrix<T, M, N> singularValues() { return S; }
+
+
+    static void refineSVD8(const Matrix<T, M, N>& A,
+        Matrix<T, M, M>& U,
+        Matrix<T, N, N>& V,
+        Matrix<T, M, N>& S) {
+
+            Ogita_Aishima_SVD<T, M, N> wrapper;
+            auto result = wrapper.OA_SVD(A, U, V);
+            U = result.matrixU();
+            V = result.matrixV();
+            S = result.singularValues();
+    }
 };
