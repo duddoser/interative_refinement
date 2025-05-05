@@ -134,7 +134,7 @@ int main() {
         return 1;
     }
 
-    csvFile << "Size,MatrixInterval,Noise,Iter,r1,r2,Ue,SError,Ve,Time_ms,Trials\n";
+    csvFile << "Size,MatrixInterval,MatrixCond,Noise,Iter,r1,r2,Ue,SError,Ve,Time_ms,Trials\n";
 
     int numTrials = 1; // данный параметр можно изменять
     
