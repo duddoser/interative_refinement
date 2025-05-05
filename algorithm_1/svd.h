@@ -3,7 +3,6 @@
 #include <cmath>
 #include <tuple>
 #include <vector>
-#define EIGEN_UNROLLING_LIMIT 0
 #if __has_include(<Eigen/LU>)
 #include <Eigen/LU> 
 #elif __has_include(<eigen3/Eigen/LU>)
@@ -140,6 +139,10 @@ protected:
 public:
     SVD() {}
 
+    SVD refine(const Eigen::Matrix<Scalar, M, N>& A) const {
+        return RefSVD(A, this->matrixU(), this->matrixV());
+    }
+
     // Конструктор, принимающий матрицу A
     SVD(Eigen::Matrix<Scalar, M, N> A) {
         Eigen::BDCSVD<Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>>
@@ -153,4 +156,15 @@ public:
     Eigen::Matrix<Scalar, N, N> matrixV() { return V; }
     Eigen::Matrix<Scalar, M, M> matrixU() { return U; }
     Eigen::Matrix<Scalar, M, N> singularValues() { return S; }
+
+    static void refine(const Eigen::Matrix<Scalar, M, N>& A,
+            Eigen::Matrix<Scalar, M, M>& U,
+            Eigen::Matrix<Scalar, N, N>& V,
+            Eigen::Matrix<Scalar, M, N>& S) {
+        SVD<Scalar, M, N> wrapper;
+        auto result = wrapper.RefSVD(A, U, V);
+        U = result.matrixU();
+        V = result.matrixV();
+        S = result.singularValues();
+    }
 };
