@@ -90,6 +90,12 @@ inline void refineSVD8(const Mat& A, Mat& U, Mat& V, Mat& S) {
 
     MatrixXd V_new = Vd + Vd * (E1 + E2);
 
+    // Re-orthogonalize to prevent error accumulation
+    HouseholderQR<MatrixXd> qrU(U_new);
+    U_new = qrU.householderQ();
+    HouseholderQR<MatrixXd> qrV(V_new);
+    V_new = qrV.householderQ();
+
     if (!U_new.allFinite() || !V_new.allFinite()) {
         std::cerr << "Warning: U or V contains NaNs or Infs after update\n";
         return;

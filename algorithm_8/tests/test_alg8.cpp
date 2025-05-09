@@ -24,10 +24,10 @@ void alignSVD(Mat& Uc, Mat& Vc, const Mat& U0, const Mat& V0) {
 }
 
 int main() {
-    vector<pair<int, int>> sizes = {{5,5}, {10,7}, {15,15}, {20,20}};
+    vector<pair<int, int>> sizes = {{5,5}, {10,7}, {15,15}, {20,20}, {30,20}, {50,50}, {100,100}};
     vector<pair<double, double>> intervals = {{1, 10}, {1, 100}};
-    vector<T> noiseLevels = {1e-15L, 1e-10L, 1e-5L, 1e-3L};
-    vector<int> iterCounts = {1, 5, 10, 20};
+    vector<T> noiseLevels = {1e-15L, 1e-10L, 1e-5L};
+    vector<int> iterCounts = {1, 5, 10, 20, 30, 50};
 
     ofstream out("alg8_test_results.csv");
     out << "Size,Interval,CondNum,Noise,Iter,Rec_l1,Rec_l2,U_err,S_err,V_err,Time_ms\n";
