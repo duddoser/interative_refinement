@@ -206,29 +206,24 @@ protected:
             }
         }
         for (int i = 0; i < n; i++)
-        {
             for (int j = n; j < m; j++)
-            {
                  F(i,j) = -Tmn(j,i)/Sigma_n(i,i);
-            }
-        }
+
         for (int i = n; i < m; i++)
-        {
             for (int j = 0; j < n; j++)
-            {
-                F(i,j) = R(i,i)-F(j,i);
-            }
-        }
+                F(i,j) = R(i,j)-F(j,i);
+
         for (int i = 0; i < n; i++)
         {
             G(i,i) = S(i,i) * 0.5;
             F(i,i) = R(i,i) * 0.5;
         }
-        for (int i = n; i < m; i++)
-        {
-            F(i,i) = R(i,i) * 0.5;
-        }
 
+        for (int i = n; i < m; ++i) 
+            for (int j = n; j < m; ++j)
+                F(i,j) = R(i,j) * 0.5;
+            
+        
         matrix_mm U = Ud + Acc_Mul(Ud, F);//Вычисление уточнённых значений левых сингулярных векторов
         matrix_nn V = Vd + Acc_Mul(Vd, G);//Вычисление уточнённых значений правых сингулярных векторов
 
@@ -269,12 +264,12 @@ public:
 
 template<int Rows, int Cols>
 void run_test() {
-    //string filename = "Jacobi_svd_test_tttttttttttttt" + to_string(Rows) + "x" + to_string(Cols) + ".txt";
-    //ofstream fout(filename);
-    //if (!fout.is_open()) {
-    //    cerr << "Failed to open " << filename << endl;
-    //    return;
-    //}
+    string filename = "filename" + to_string(Rows) + "x" + to_string(Cols) + ".txt";
+    ofstream fout(filename);
+    if (!fout.is_open()) {
+       cerr << "Failed to open " << filename << endl;
+       return;
+    }
 
     // Генерация случайной матрицы
     Matrix<float, Rows, Cols> A = Matrix<float, Rows, Cols>::Random();
@@ -301,16 +296,16 @@ void run_test() {
     float norm_oa  = (A - A_oa).norm();
 
     // Вывод
-    //fout << "Matrix size: " << Rows << "x" << Cols << "\n";
-    //fout << "Norm (Eigen SVD): " << norm_bdc << "\n";
-    //fout << "Norm (Ogita-Aishima): " << norm_oa << "\n";
-    //fout << "Elapsed time (Ogita-Aishima): " << elapsed.count() << " sec\n";
+    fout << "Matrix size: " << Rows << "x" << Cols << "\n";
+    fout << "Norm (Eigen SVD): " << norm_bdc << "\n";
+    fout << "Norm (Ogita-Aishima): " << norm_oa << "\n";
+    fout << "Elapsed time (Ogita-Aishima): " << elapsed.count() << " sec\n";
     cout << "Matrix size: " << Rows << "x" << Cols << "\n";
     cout << "Norm (Eigen SVD): " << norm_bdc << "\n";
     cout << "Norm (Ogita-Aishima): " << norm_oa << "\n";
     cout << "Elapsed time (Ogita-Aishima): " << elapsed.count() << " sec\n";
 
-    //fout.close();
+    fout.close();
 }
 
 
@@ -321,7 +316,7 @@ int main() {
     //run_test<30, 30>();
     //run_test<40, 40>();
     //run_test<50, 50>();
-    run_test<60, 60>();
+    //run_test<60, 60>();
     //run_test<50, 40>();
     //run_test<60, 40>();
     return 0;
