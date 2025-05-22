@@ -1,3 +1,5 @@
+// Реализация: Минаков Владислав
+// КМБО-01-23 
 // Шаги тестирования:
 // 1. Задаётся набор размеров матриц m×n для проверки разных форм и размерностей.
 // 2. Для каждого размера генерируются случайные Ортогональные матрицы U и V.
@@ -18,35 +20,43 @@
 #include <iomanip>
 #include <limits>
 #include <algorithm>
-#include "Ogita_Aishima.h"
+#include "Ogita_Aishima_SVD.h"
 
 using namespace std;
 using namespace Eigen;
 using T = long double;
 using Mat = Matrix<T, Dynamic, Dynamic>;
 
-int main() {
-    //                                         // Размеры матриц
-    // vector<pair<int,int>> sizes             = {{3,3},{5,4},{7,7},{10,10},{15,10},{15,15},{20,20},{20,17}, {30,30}, {30,25}, {52,38}, {50,50}};
-    //                                         // Интервал сингулярных значений
-    // vector<pair<double,double>> intervals   = {{0,1},{0,10},{0,100},{0,1000}};
-    //                                         // Количество итераций
-    // vector<int> iterCounts                  = {1,5,10,20,30,50,100};
-    //                                         // Уровень шума
-    // vector<T> noiseLevels                   = {1e-20L,1e-15L,1e-10L,1e-5L};
+void big_test()
+{
+//                                         // Размеры матриц
+     // vector<pair<int,int>> sizes             = {{3,3},{5,4},{7,7},{10,10},{15,10},{15,15},{20,20},{20,17}, {30,30}, {30,25}, {52,38}, {50,50}};
+     //                                         // Интервал сингулярных значений
+     // vector<pair<double,double>> intervals   = {{0,1},{0,10},{0,100},{0,1000}};
+     //                                         // Количество итераций
+     // vector<int> iterCounts                  = {1,5,10,20,30,50,100};
+     //                                         // Уровень шума
+     // vector<T> noiseLevels                   = {1e-20L,1e-15L,1e-10L,1e-5L};
+
+     //                                         // Размеры матриц
+     // vector<pair<int,int>> sizes             = {{60,60}};
+     //                                         // Интервал сингулярных значений
+     // vector<pair<double,double>> intervals   = {{0,10},{0,100}};
+     //                                         // Количество итераций
+     // vector<int> iterCounts                  = {1,5,10,30,50};
+     //                                         // Уровень шума
+     // vector<T> noiseLevels                   = {1e-20L,1e-15L,1e-10L,1e-5L};4
 
     // ---- Big matrix
-                                            // Размеры матриц
-    vector<pair<int,int>> sizes             = {{1000,1000}};
-                                            // Интервал сингулярных значений
-    vector<pair<double,double>> intervals   = {{0,100}};
-                                            // Количество итераций
-    vector<int> iterCounts                  = {5};
-                                            // Уровень шума
-    vector<T> noiseLevels                   = {1e-15L};
-
-
-    ofstream file("tests_on_big_matrix.csv");
+     vector<pair<int,int>> sizes             = {{30,30},{60,60},{100,100}};
+                                             // Интервал сингулярных значений
+     vector<pair<double,double>> intervals   = {{0,10},{0,100}};
+                                             // Количество итераций
+     vector<int> iterCounts                  = {1,5,10};
+                                             // Уровень шума
+     vector<T> noiseLevels                   = {1e-15L};
+    
+    ofstream file("tests.csv");
     file << "Size,Interval,CondNum,NoiseLevel,Iter,Rec_l1,Rec_l2,Time_ms,U_err,S_err,V_err\n";
 
     random_device rd; mt19937 gen(rd()); // Генератор случайных чисел
@@ -99,14 +109,14 @@ int main() {
                     long double Ue = (Un - U).norm();
                     long double Ve = (Vn - V).norm();
                     long double Se = (Sn - S).norm();
-                    double timeIt = chrono::duration<double, milli>(start - end).count();
+                    double timeIt = chrono::duration<double, milli>(end - start).count();
 
                     file << m << "x" << n << ",[" << a << ";" << b << "],"
                         << condNum << "," << noiseLevel << "," << it << ","
                         << r1 << "," << r2 << "," << timeIt << ","
                         << Ue << "," << Se << "," << Ve << "\n";
                     cout << "Size: " << m << "x" << n
-                         << " noise=" << noiseLevel << " it=" << it << " done\n";
+                         << " noise=" << noiseLevel << " it=" << it << " done " << timeIt << endl;
 
                     // Сохранение матриц
                     ofstream fa("A_mat.txt");
@@ -143,6 +153,7 @@ int main() {
 
                     fa.close(); fu.close(); fs.close(); fv.close();
                     fa_res.close(); fu_res.close(); fs_res.close(); fv_res.close();
+
                 }
                 file << "\n";
             }
@@ -151,5 +162,13 @@ int main() {
 
     file.close();
     cout << "Finished" << endl;
+}
+
+
+
+int main() {
+
+    big_test();
+
     return 0;
 }
