@@ -1,8 +1,17 @@
+// Реализация: Минаков Владислав
+// КМБО-01-23 
+// В этом коде реализуются тесты алгоримта Ogita_Aigsima
+// с использованием точного матричного умножения
+
 #include <iostream>
 #include <vector>
 #include "eigen/Eigen/Dense"
 #include "eigen/Eigen/Sparse"
 #include <chrono>
+#include <random>
+#include <fstream>
+
+
 using namespace std;
 using namespace Eigen;
 using namespace std::chrono;
@@ -164,8 +173,7 @@ protected:
             Sigma_n(i, i) = Tmn(i,i) / (1 - ((R(i,i) + S(i,i)) * 0.5));
         };
 
-        matrix_mn Sigma;//Матрица сингулярных значений
-        Sigma.setZero();
+        matrix_mn Sigma = matrix_mn::Zero(m, n);
         Sigma.block(0, 0, n, n) = Sigma_n;
 
         matrix_nn R11 = R.topLeftCorner(n, n); // Верхний левый блок матрицы R размера n x n
@@ -176,8 +184,8 @@ protected:
         matrix_nn D = Acc_Mul(Sigma_n, Calpha) + Acc_Mul(Cbeta, Sigma_n);
         matrix_nn E = Acc_Mul(Calpha, Sigma_n) + Acc_Mul(Sigma_n, Cbeta);
 
-        matrix_nn G;
-        matrix_mm F;
+        matrix_nn G = matrix_nn::Zero(n,n);
+        matrix_mm F = matrix_mm::Zero(m, m);
 
         double temp1;
         double temp2;
@@ -234,16 +242,23 @@ protected:
         return ANS;
     }
 public:
-    Ogita_Aishima_SVD(){};
-    Ogita_Aishima_SVD(Matrix<T, M, N> A)
-    {
-        // Здесь должен использоваться неточный расчёт левых и правых сингулярных векторов с помощью функции из библиотеки Eigen
-        JacobiSVD<Matrix<T, Dynamic, Dynamic>> svd(A, ComputeFullU | ComputeFullV);
-        Ogita_Aishima_SVD<T, M, N> temp = OA_SVD(A, svd.matrixU(), svd.matrixV());// Уточнение результата нашей функцией
-
-        this->U = temp.matrixU();
-        this->V = temp.matrixV();
-        this->S = temp.singularValues();
+    Ogita_Aishima_SVD() {};
+    // стандартный SVD + одна итерация уточнения
+    Ogita_Aishima_SVD(Matrix<T, M, N> A) {
+        BDCSVD<Matrix<T,Dynamic,Dynamic>> svd(A, ComputeFullU | ComputeFullV);
+        Ogita_Aishima_SVD<T,M,N> temp = OA_SVD(A, svd.matrixU(), svd.matrixV());
+        U = temp.matrixU();
+        V = temp.matrixV();
+        S = temp.singularValues();
+    }
+    // итеративное уточнение от заданных U,V
+    Ogita_Aishima_SVD(Matrix<T, M, N> A, Matrix<T, M, M> Ui, Matrix<T, N, N> Vi, int iterations) {
+        Ogita_Aishima_SVD<T,M,N> current = OA_SVD(A, Ui, Vi);
+        for (int k = 1; k < iterations; ++k)
+            current = OA_SVD(A, current.matrixU(), current.matrixV());
+        U = current.matrixU();
+        V = current.matrixV();
+        S = current.singularValues();
     }
 
     Matrix<T, N, N> matrixV()
@@ -262,62 +277,89 @@ public:
     }
 };
 
-template<int Rows, int Cols>
-void run_test() {
-    string filename = "filename" + to_string(Rows) + "x" + to_string(Cols) + ".txt";
-    ofstream fout(filename);
-    if (!fout.is_open()) {
-       cerr << "Failed to open " << filename << endl;
-       return;
+
+using T = double;
+using Mat = Matrix<T, Dynamic, Dynamic>;
+int main() {
+
+     vector<pair<int,int>> sizes             = {{10,10}};
+                                             // Интервал сингулярных значений
+     vector<pair<double,double>> intervals   = {{0,10},{0,100}};
+                                             // Количество итераций
+     vector<int> iterCounts                  = {1,5,10,20,50};
+                                             // Уровень шума
+     vector<T> noiseLevels                   = {1e-15,1e-10};
+
+
+    ofstream file("test_mul.csv");
+    file << "Size,Interval,CondNum,NoiseLevel,Iter,Rec_l1,Rec_l2,Time_ms,U_err,S_err,V_err\n";
+
+    random_device rd; mt19937 gen(rd()); // Генератор случайных чисел
+
+    for (auto [m,n] : sizes) {
+        for (auto [a,b] : intervals) {
+            // Генерация исходной матрицы A = U * S * V^T
+            Mat U = Mat::Random(m,m);
+            Mat V = Mat::Random(n,n);
+            HouseholderQR<Mat> qrU(U), qrV(V);
+            U = qrU.householderQ();
+            V = qrV.householderQ();
+
+            uniform_real_distribution<T> dist(a,b);
+            vector<T> sv(n);
+            for (int i = 0; i < n; ++i) sv[i] = dist(gen);
+            sort(sv.begin(), sv.end(), greater<T>());
+
+            Mat S = Mat::Zero(m,n);
+            for (int i = 0; i < n; ++i) S(i,i) = sv[i];
+            Mat A = U * S * V.transpose();
+            T condNum = sv.front() / sv.back();
+
+            for (T noiseLevel : noiseLevels) 
+            {
+                // Зашумление U и V
+                Mat Uc = U;
+                Mat Vc = V;
+                uniform_real_distribution<T> noiseDist(0.0, noiseLevel);
+                for (int i = 0; i < Uc.rows(); ++i)
+                    for (int j = 0; j < Uc.cols(); ++j)
+                        Uc(i,j) += noiseDist(gen);
+                for (int i = 0; i < Vc.rows(); ++i)
+                    for (int j = 0; j < Vc.cols(); ++j)
+                        Vc(i,j) += noiseDist(gen);
+
+                for (int it : iterCounts) {
+                    Mat Un, Vn, Sn;
+                    auto start = chrono::high_resolution_clock::now();
+                    // Итеративное уточнение Ogita–Aishima SVD на основе шумных Uc, Vc
+                    Ogita_Aishima_SVD<T, Dynamic, Dynamic> svd(A, Uc, Vc, it);
+                    Un = svd.matrixU();
+                    Sn = svd.singularValues();
+                    Vn = svd.matrixV();
+                    auto end = chrono::high_resolution_clock::now();
+
+
+                    T r1 = (A - Un * Sn * Vn.transpose()).template lpNorm<1>();
+                    T r2 = (A - Un * Sn * Vn.transpose()).norm();
+                    T Ue = (Un - U).norm();
+                    T Ve = (Vn - V).norm();
+                    T Se = (Sn - S).norm();
+                    double timeIt = chrono::duration<double, milli>(end - start).count();
+
+                    file << m << "x" << n << ",[" << a << ";" << b << "],"
+                        << condNum << "," << noiseLevel << "," << it << ","
+                        << r1 << "," << r2 << "," << timeIt << ","
+                        << Ue << "," << Se << "," << Ve << "\n";
+                    cout << "Size: " << m << "x" << n
+                         << " noise=" << noiseLevel << " it=" << it << " done " << timeIt << endl;
+
+                }
+                file << "\n";
+            }
+        }
     }
 
-    // Генерация случайной матрицы
-    Matrix<float, Rows, Cols> A = Matrix<float, Rows, Cols>::Random();
-
-    // SVD через Eigen
-    JacobiSVD<Matrix<float, Rows, Cols>> svd(A, ComputeFullU | ComputeFullV);
-
-    Matrix<float, Rows, Cols> Sigma = Matrix<float, Rows, Cols>::Zero();
-    for (int i = 0; i < svd.singularValues().size(); ++i)
-        Sigma(i, i) = svd.singularValues()(i);
-
-    Matrix<float, Rows, Cols> A_bdc = svd.matrixU() * Sigma * svd.matrixV().transpose();
-
-    // Наш алгоритм
-    auto start = high_resolution_clock::now();
-    Ogita_Aishima_SVD<float, Rows, Cols> ans(A);
-    auto end = high_resolution_clock::now();
-    duration<double> elapsed = end - start;
-
-    Matrix<float, Rows, Cols> A_oa = ans.matrixU() * ans.singularValues() * ans.matrixV().transpose();
-
-    // Расчёт норм
-    float norm_bdc = (A - A_bdc).norm();
-    float norm_oa  = (A - A_oa).norm();
-
-    // Вывод
-    fout << "Matrix size: " << Rows << "x" << Cols << "\n";
-    fout << "Norm (Eigen SVD): " << norm_bdc << "\n";
-    fout << "Norm (Ogita-Aishima): " << norm_oa << "\n";
-    fout << "Elapsed time (Ogita-Aishima): " << elapsed.count() << " sec\n";
-    cout << "Matrix size: " << Rows << "x" << Cols << "\n";
-    cout << "Norm (Eigen SVD): " << norm_bdc << "\n";
-    cout << "Norm (Ogita-Aishima): " << norm_oa << "\n";
-    cout << "Elapsed time (Ogita-Aishima): " << elapsed.count() << " sec\n";
-
-    fout.close();
-}
-
-
-
-int main() {
-    //run_test<10, 10>();
-    //run_test<20, 20>();
-    //run_test<30, 30>();
-    //run_test<40, 40>();
-    //run_test<50, 50>();
-    //run_test<60, 60>();
-    //run_test<50, 40>();
-    //run_test<60, 40>();
+    file.close();
+    cout << "Finished" << endl;
     return 0;
 }
