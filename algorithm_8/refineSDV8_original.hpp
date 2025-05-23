@@ -26,14 +26,14 @@ protected:
             return Ogita_Aishima_SVD();
         }
 
-        using matrix_nn = Matrix<double, N, N>;
-        using matrix_mn = Matrix<double, M, N>;
-        using matrix_mm = Matrix<double, M, M>;
-        using matrix_nm = Matrix<double, N, M>;
+        using matrix_nn = Matrix<T, N, N>;
+        using matrix_mn = Matrix<T, M, N>;
+        using matrix_mm = Matrix<T, M, M>;
+        using matrix_nm = Matrix<T, N, M>;
 
-        matrix_mn Ad = A.template cast<double>();
-        matrix_mm Ud = Ui.template cast<double>();
-        matrix_nn Vd = Vi.template cast<double>();
+        matrix_mn Ad = A.template cast<T>();
+        matrix_mm Ud = Ui.template cast<T>();
+        matrix_nn Vd = Vi.template cast<T>();
 
         MatrixXd Im = MatrixXd::Identity(m, m);
         MatrixXd In = MatrixXd::Identity(n, n);
@@ -46,14 +46,14 @@ protected:
         matrix_nn ViT = Vd.transpose();
         matrix_mm UiT = Ud.transpose();
 
-        std::vector<double> r(n, 0.0);
-        std::vector<double> t(n, 0.0);
+        std::vector<T> r(n, 0.0);
+        std::vector<T> t(n, 0.0);
         matrix_nn Sigma_n(n, n);
         Sigma_n.setZero();
 
-        for (int i = 0; i < n; i++) {
-            double ui_ud = (UiT.row(i) * Ud.col(i))(0, 0);
-            double vi_vd = (ViT.row(i) * Vd.col(i))(0, 0);
+        for (int i = 0; i < n; ++i) {
+            T ui_ud = (UiT.row(i) * Ud.col(i))(0, 0);
+            T vi_vd = (ViT.row(i) * Vd.col(i))(0, 0);
             r[i] = 1.0 - 0.5 * (ui_ud + vi_vd);
             t[i] = UiT.row(i) * P.col(i);
             Sigma_n(i, i) = t[i] / (1 - r[i]);
@@ -72,7 +72,6 @@ protected:
         matrix_nn Q1 = 0.5 * (P3 + P4);
         matrix_nn Q2 = 0.5 * (P3 - P4);
 
-        // Объявляем переменные до условий
         MatrixXd Ud_2;
         MatrixXd E3, E4, E5;
         
@@ -86,7 +85,6 @@ protected:
             E4 = Q4 * Sigma_n.inverse();
             E5 = 0.5 * (MatrixXd::Identity(m-n, m-n) - Ud_2.transpose() * Ud_2);
         } else {
-            // Инициализация нулевыми матрицами соответствующего размера
             Ud_2 = MatrixXd::Zero(m, 0);
             E3 = MatrixXd::Zero(n, 0);
             E4 = MatrixXd::Zero(0, n);
@@ -107,7 +105,6 @@ protected:
             E1(i, i) = 0.5 * r[i];
         E2.diagonal().setZero();
 
-        // Исправленная часть: формирование матрицы U
         matrix_mn U1 = Ud_1 + Ud_1 * (E1 - E2);
         if (m > n) {
             U1 += std::sqrt(2.0) * Ud_2 * E4;

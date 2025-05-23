@@ -15,13 +15,12 @@ inline void refineSVD8(const Mat& A, Mat& U, Mat& V, Mat& S) {
     assert(U.rows() == m && U.cols() == m);
     assert(V.rows() == n && V.cols() == n);
 
-    MatrixXd Ad = A.cast<double>();
-    MatrixXd Ud = U.cast<double>();
-    MatrixXd Vd = V.cast<double>();
+    MatrixXd Ad = A.cast<T>();
+    MatrixXd Ud = U.cast<T>();
+    MatrixXd Vd = V.cast<T>();
 
     MatrixXd Ud_1 = Ud.leftCols(n);
 
-    // Step 1: Compute updated Sigma directly from Uᵗ A V (as in the paper)
     MatrixXd Sigma_n = Ud_1.transpose() * Ad * Vd;
 
     if (!Sigma_n.allFinite()) {
@@ -67,8 +66,8 @@ inline void refineSVD8(const Mat& A, Mat& U, Mat& V, Mat& S) {
 
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            double d1 = std::abs(denom1(i, j)) < 1e-14 ? 1e-14 : denom1(i, j);
-            double d2 = std::abs(denom2(i, j)) < 1e-14 ? 1e-14 : denom2(i, j);
+            T d1 = std::abs(denom1(i, j)) < 1e-14L ? 1e-14L : denom1(i, j);
+            T d2 = std::abs(denom2(i, j)) < 1e-14L ? 1e-14L : denom2(i, j);
             E1(i, j) = Q1(i, j) / d1;
             E2(i, j) = Q2(i, j) / d2;
         }
