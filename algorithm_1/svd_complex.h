@@ -52,17 +52,15 @@ protected:
             return ans;
         }
 
-        // Используем double для промежуточных вычислений.
-        // При этом для комплексных чисел работает cast, если Scalar – std::complex<float>
-        using matrix_dd = Eigen::Matrix<complex<double>, Dynamic, Dynamic>;
-        using matrix_mm = Eigen::Matrix<complex<double>, M, M>; // U
-        using matrix_mn = Eigen::Matrix<complex<double>, M, N>; // A
-        using matrix_nn = Eigen::Matrix<complex<double>, N, N>; // V
-
-        // Приводим матрицы к типу complex<double>
-        matrix_mn Ad = A.template cast<complex<double>>();
-        matrix_mm Ud = Ui.template cast<complex<double>>();
-        matrix_nn Vd = Vi.template cast<complex<double>>();
+        using matrix_dd = Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>;
+        using matrix_mm = Eigen::Matrix<Scalar, M, M>; // U
+        using matrix_mn = Eigen::Matrix<Scalar, M, N>; // A
+        using matrix_nn = Eigen::Matrix<Scalar, N, N>; // V
+        
+        // Приводим матрицы к типу Scalar (может быть комплексным или вещественным)
+        matrix_mn Ad = A.template cast<Scalar>();
+        matrix_mm Ud = Ui.template cast<Scalar>();
+        matrix_nn Vd = Vi.template cast<Scalar>();
 
         // Step 1: Compute temp matrices: R, S, T.
         // Здесь R и S рассчитываются как (I - U^H * U) и (I - V^H * V).
@@ -75,38 +73,39 @@ protected:
 
         // Step 2 and 3: compute diag parts.
         matrix_nn Sigma_n = matrix_nn::Zero(n, n);
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n; ++i) {
             // Здесь деление производится по формуле, предполагающей вещественную арифметику.
             // При работе с комплексными может потребоваться поправка.
-            Sigma_n(i, i) = T(i, i) / (complex<double>(1.0, 0.0) - (R(i, i) + S_mat(i, i)) * 0.5);
-            F11(i, i) = R(i, i) * 0.5;
-            G(i, i) = S_mat(i, i) * 0.5;
+            Sigma_n(i, i) = T(i, i) / ( static_cast<Scalar>(1.0) - (R(i, i) + S_mat(i, i)) * static_cast<Scalar>(0.5) );
+            F11(i, i) = R(i, i) * static_cast<Scalar>(0.5);
+            G(i, i) = S_mat(i, i) * static_cast<Scalar>(0.5);
         }
         
         // Step 4: Compute off-diagonal parts of F11 and G.
-        complex<double> alpha, betta;
-        double sigma_i_sqr, sigma_j_sqr;
-        for (int i = 0; i < n; i++) {
+        Scalar alpha, betta;
+        Scalar sigma_i_sqr, sigma_j_sqr;
+        for (int i = 0; i < n; ++i) {
             sigma_i_sqr = norm(Sigma_n(i, i)); // для комплексного числа используем norm (квадрат модуля)
-            for (int j = 0; j < n; j++) {
+            for (int j = 0; j < n; ++j) {
                 if (i != j) {
                     sigma_j_sqr = norm(Sigma_n(j, j));
-                    // Здесь alpha и betta вычисляются как сумма T(i,j) + Sigma_n(j,j)*R(i,j) и T(j,i) + Sigma_n(j,j)*S(i,j)
                     alpha = T(i, j) + Sigma_n(j, j) * R(i, j);
                     betta = T(j, i) + Sigma_n(j, j) * S_mat(i, j);
-                    // Если знаменатель равен нулю, потребуется обработка.
-                    F11(i, j) = (alpha * Sigma_n(j, j) + betta * Sigma_n(i, i)) / (complex<double>(sigma_j_sqr,0) - complex<double>(sigma_i_sqr,0));
-                    G(i, j) = (alpha * Sigma_n(i, i) + betta * Sigma_n(j, j)) / (complex<double>(sigma_j_sqr,0) - complex<double>(sigma_i_sqr,0));
+                    F11(i, j) = (alpha * Sigma_n(j, j) + betta * Sigma_n(i, i))
+                                  / (static_cast<Scalar>(sigma_j_sqr) - static_cast<Scalar>(sigma_i_sqr));
+                    G(i, j) = (alpha * Sigma_n(i, i) + betta * Sigma_n(j, j))
+                               / (static_cast<Scalar>(sigma_j_sqr) - static_cast<Scalar>(sigma_i_sqr));
+
                 }
             }
         }
 
         // Step 5: сбор диагональной матрицы Sigma (размер m x n)
         matrix_mn Sigma = matrix_dd::Zero(m, n);
-        Sigma.block(0, 0, n, n) = Sigma_n.adjoint(); // Можно взять transpose/adjoint по необходимости
+        Sigma.block(0, 0, n, n) = Sigma_n.adjoint(); 
 
         // Step 6: compute F12;
-        Eigen::Matrix<complex<double>, Dynamic, Dynamic> F12(n, m - n);
+        Eigen::Matrix<Scalar, Dynamic, Dynamic> F12(n, m - n);
         for (int i = 0; i < n; ++i) {
             for (int j = n; j < m; ++j) {
                 F12(i, j - n) = -T(j, i) / Sigma_n(i, i);
@@ -114,7 +113,7 @@ protected:
         }
         
         // Step 7: compute F21;
-        Eigen::Matrix<complex<double>, Dynamic, Dynamic> F21(m - n, n);
+        Eigen::Matrix<Scalar, Dynamic, Dynamic> F21(m - n, n);
         for (int i = n; i < m; ++i) {
             for (int j = 0; j < n; ++j) {
                 F21(i - n, j) = R(i, j) - F12(j, i - n);
@@ -122,7 +121,7 @@ protected:
         }
         
         // Step 8: compute F22;
-        Eigen::Matrix<complex<double>, Dynamic, Dynamic> F22(m - n, m - n);
+        Eigen::Matrix<Scalar, Dynamic, Dynamic> F22(m - n, m - n);
         for (int i = n; i < m; ++i) {
             for (int j = n; j < m; ++j) {
                 F22(i - n, j - n) = R(i, j) * 0.5;
@@ -140,7 +139,6 @@ protected:
         matrix_nn V_new = Vd + Vd * G;
 
         SVD<Scalar, M, N> ans;
-        // Приведение к исходному типу Scalar (например, complex<float>)
         ans.Set_U(U_new.template cast<Scalar>());
         ans.Set_V(V_new.template cast<Scalar>());
         ans.Set_S(Sigma.template cast<Scalar>());
