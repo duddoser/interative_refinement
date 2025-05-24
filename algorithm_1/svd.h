@@ -44,14 +44,14 @@ protected:
             return ans;
         }
 
-        using matrix_dd = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
-        using matrix_mm = Eigen::Matrix<double, M, M>;
-        using matrix_mn = Eigen::Matrix<double, M, N>;
-        using matrix_nn = Eigen::Matrix<double, N, N>;
+        using matrix_dd = Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic>;
+        using matrix_mm = Eigen::Matrix<Scalar, M, M>;
+        using matrix_mn = Eigen::Matrix<Scalar, M, N>;
+        using matrix_nn = Eigen::Matrix<Scalar, N, N>;
 
-        matrix_mn Ad = A.template cast<double>();
-        matrix_mm Ud = Ui.template cast<double>();
-        matrix_nn Vd = Vi.template cast<double>();
+        matrix_mn Ad = A.template cast<Scalar>();
+        matrix_mm Ud = Ui.template cast<Scalar>();
+        matrix_nn Vd = Vi.template cast<Scalar>();
 
         // Шаг 1. Вычисляем промежуточные матрицы:
         // R = I_m - Udᵀ * Ud, S = I_n - Vdᵀ * Vd, T = Udᵀ * Ad * Vd.
@@ -67,17 +67,17 @@ protected:
         matrix_nn Sigma_n = matrix_nn::Zero(n, n);
 
         // Шаг 3. Вычисляем диагональные элементы:
-        for (int i = 0; i < n; i++) {
+        for (int i = 0; i < n; ++i) {
             Sigma_n(i, i) = T(i, i) / (1.0 - 0.5 * (R(i, i) + S_mat(i, i)));
             F11(i, i) = 0.5 * R(i, i);
             G(i, i) = 0.5 * S_mat(i, i);
         }
 
         // Шаг 4. Вычисляем внедиагональные элементы F11 и G:
-        double alpha, betta, sigma_i_sqr, sigma_j_sqr;
-        for (int i = 0; i < n; i++) {
+        long double alpha, betta, sigma_i_sqr, sigma_j_sqr;
+        for (int i = 0; i < n; ++i) {
             sigma_i_sqr = Sigma_n(i, i) * Sigma_n(i, i);
-            for (int j = 0; j < n; j++) {
+            for (int j = 0; j < n; ++j) {
                 if (i != j) {
                     sigma_j_sqr = Sigma_n(j, j) * Sigma_n(j, j);
                     alpha = T(i, j) + Sigma_n(j, j) * R(i, j);
@@ -95,24 +95,24 @@ protected:
 
         // Шаг 6. Вычисляем минор F12 (размер N×(m - n)):
         matrix_dd F12(n, m - n);
-        for (int i = 0; i < n; i++) {
-            for (int j = n; j < m; j++) {
+        for (int i = 0; i < n; ++i) {
+            for (int j = n; j < m; ++j) {
                 F12(i, j - n) = -T(j, i) / Sigma_n(i, i);
             }
         }
 
         // Шаг 7. Вычисляем минор F21 (размер (m - n)×N):
         matrix_dd F21(m - n, n);
-        for (int i = n; i < m; i++) {
-            for (int j = 0; j < n; j++) {
+        for (int i = n; i < m; ++i) {
+            for (int j = 0; j < n; ++j) {
                 F21(i - n, j) = R(i, j) - F12(j, i - n);
             }
         }
 
         // Шаг 8. Вычисляем минор F22 (размер (m - n)×(m - n)):
         matrix_dd F22(m - n, m - n);
-        for (int i = n; i < m; i++) {
-            for (int j = n; j < m; j++) {
+        for (int i = n; i < m; ++i) {
+            for (int j = n; j < m; ++j) {
                 F22(i - n, j - n) = 0.5 * R(i, j);
             }
         }
